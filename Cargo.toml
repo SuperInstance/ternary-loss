@@ -1,4 +1,6 @@
 [package]
+description = "ternary-loss - SuperInstance ecosystem crate"
+repository = "https://github.com/SuperInstance/ternary-loss"
 name = "ternary-loss"
 version = "0.1.0"
 edition = "2024"
