@@ -2,7 +2,7 @@
 
 **Loss functions that understand Z₃ arithmetic — because {-1, 0, +1} has structure you shouldn't ignore.**
 
-[![Tests](https://img.shields.io/badge/tests-26%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-32%20passing-brightgreen)]()
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## Why This Exists
@@ -248,7 +248,7 @@ Loss functions are the training signal for the ternary stack:
 cargo test
 ```
 
-26 tests covering: exhaustive Z₃ arithmetic (all 9 cases for add/sub/mul/neg), cross-entropy for perfect/bad predictions, uniform distribution CE = ln(3), hinge loss with satisfied/violated margins, MSE for identical/partial/maximum distance, contrastive loss (similar close, dissimilar far, mixed), triplet loss (perfect/violated/equidistant), KL divergence (identical = 0, non-negative, asymmetric), utility functions.
+32 tests covering: exhaustive Z₃ arithmetic (all 9 cases for add/sub/mul/neg), cross-entropy for perfect/bad predictions and equal-logits CE = ln(3), uniform distribution CE = ln(3), hinge loss with satisfied/violated margins, MSE for identical/partial/maximum/completely-wrong distance, contrastive loss (similar close, dissimilar far, mixed), triplet loss (perfect/violated/equidistant), KL divergence (identical = 0, non-negative, asymmetric, zero-probability finite), empty-batch inputs (no NaN), single-element inputs, and a README-conformance test locking the documented Quick Start values to the code.
 
 ## License
 
