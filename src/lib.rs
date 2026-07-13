@@ -12,7 +12,7 @@ pub type Ternary = i32;
 
 /// Validate that a value is ternary (in {-1, 0, +1}).
 pub fn is_ternary(v: i32) -> bool {
-    matches!(v, -1 | 0 | 1)
+    (-1..=1).contains(&v)
 }
 
 /// Z₃ addition: explicitly enumerated.
@@ -106,10 +106,20 @@ pub fn ternary_cross_entropy(logits: &[Vec<f64>], targets: &[usize]) -> f64 {
     let mut total = 0.0;
 
     for (sample_logits, &target) in logits.iter().zip(targets.iter()) {
-        assert_eq!(sample_logits.len(), 3, "logits must have 3 entries per sample");
+        assert_eq!(
+            sample_logits.len(),
+            3,
+            "logits must have 3 entries per sample"
+        );
         // Softmax
-        let max_logit = sample_logits.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        let exps: Vec<f64> = sample_logits.iter().map(|&l| (l - max_logit).exp()).collect();
+        let max_logit = sample_logits
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+        let exps: Vec<f64> = sample_logits
+            .iter()
+            .map(|&l| (l - max_logit).exp())
+            .collect();
         let sum_exp: f64 = exps.iter().sum();
         let prob = exps[target] / sum_exp;
         total -= prob.ln();
@@ -122,10 +132,7 @@ pub fn ternary_cross_entropy(logits: &[Vec<f64>], targets: &[usize]) -> f64 {
 ///
 /// `predicted_probs`: probabilities for {-1, 0, +1} per sample (should sum to 1).
 /// `target`: ternary target value per sample.
-pub fn ternary_cross_entropy_from_probs(
-    predicted_probs: &[Vec<f64>],
-    targets: &[Ternary],
-) -> f64 {
+pub fn ternary_cross_entropy_from_probs(predicted_probs: &[Vec<f64>], targets: &[Ternary]) -> f64 {
     assert_eq!(predicted_probs.len(), targets.len());
     let n = predicted_probs.len() as f64;
     let mut total = 0.0;
@@ -164,7 +171,9 @@ pub fn ternary_hinge_loss(scores: &[Vec<f64>], targets: &[usize], margin: f64) -
     for (sample_scores, &target) in scores.iter().zip(targets.iter()) {
         assert_eq!(sample_scores.len(), 3);
         let correct_score = sample_scores[target];
-        let best_incorrect = sample_scores.iter().enumerate()
+        let best_incorrect = sample_scores
+            .iter()
+            .enumerate()
             .filter(|(i, _)| *i != target)
             .map(|(_, &s)| s)
             .fold(f64::NEG_INFINITY, f64::max);
@@ -194,7 +203,11 @@ pub fn ternary_mse(predicted: &[Vec<Ternary>], target: &[Vec<Ternary>]) -> f64 {
         }
     }
 
-    if count == 0 { 0.0 } else { total / count as f64 }
+    if count == 0 {
+        0.0
+    } else {
+        total / count as f64
+    }
 }
 
 // ── Contrastive Loss for Ternary Embeddings ───────────────────────────────────
@@ -236,7 +249,9 @@ pub fn ternary_contrastive_loss(
 /// Compute L2-like distance between two ternary embeddings using Z₃ arithmetic.
 fn ternary_embedding_distance(a: &[Ternary], b: &[Ternary]) -> f64 {
     assert_eq!(a.len(), b.len());
-    let dist_sq: f64 = a.iter().zip(b.iter())
+    let dist_sq: f64 = a
+        .iter()
+        .zip(b.iter())
         .map(|(&ai, &bi)| {
             let d = z3_distance(ai, bi);
             d * d
@@ -344,15 +359,15 @@ mod tests {
     #[test]
     fn test_z3_sub_comprehensive() {
         // a - b in Z₃
-        assert_eq!(z3_sub(-1, -1), 0);  // -1 - (-1) = 0
-        assert_eq!(z3_sub(-1, 0), -1);  // -1 - 0 = -1
-        assert_eq!(z3_sub(-1, 1), 1);   // -1 - 1 = 1 (wraps in Z₃: -2 mod 3 = 1)
-        assert_eq!(z3_sub(0, -1), 1);   // 0 - (-1) = 1
+        assert_eq!(z3_sub(-1, -1), 0); // -1 - (-1) = 0
+        assert_eq!(z3_sub(-1, 0), -1); // -1 - 0 = -1
+        assert_eq!(z3_sub(-1, 1), 1); // -1 - 1 = 1 (wraps in Z₃: -2 mod 3 = 1)
+        assert_eq!(z3_sub(0, -1), 1); // 0 - (-1) = 1
         assert_eq!(z3_sub(0, 0), 0);
-        assert_eq!(z3_sub(0, 1), -1);   // 0 - 1 = -1
+        assert_eq!(z3_sub(0, 1), -1); // 0 - 1 = -1
         assert_eq!(z3_sub(1, -1), -1); // 1 - (-1) = 1+1 = -1 in Z₃
-        assert_eq!(z3_sub(1, 0), 1);   // 1 - 0 = 1
-        assert_eq!(z3_sub(1, 1), 0);   // 1 - 1 = 0
+        assert_eq!(z3_sub(1, 0), 1); // 1 - 0 = 1
+        assert_eq!(z3_sub(1, 1), 0); // 1 - 1 = 0
     }
 
     #[test]
@@ -387,7 +402,11 @@ mod tests {
         let targets = vec![2, 0];
         let loss = ternary_cross_entropy(&logits, &targets);
         assert!(loss >= 0.0, "loss should be non-negative");
-        assert!(loss < 0.01, "perfect prediction should have near-zero loss, got {}", loss);
+        assert!(
+            loss < 0.01,
+            "perfect prediction should have near-zero loss, got {}",
+            loss
+        );
     }
 
     #[test]
@@ -398,16 +417,24 @@ mod tests {
         ];
         let targets = vec![2];
         let loss = ternary_cross_entropy(&logits, &targets);
-        assert!(loss > 1.0, "bad prediction should have high loss, got {}", loss);
+        assert!(
+            loss > 1.0,
+            "bad prediction should have high loss, got {}",
+            loss
+        );
     }
 
     #[test]
     fn test_cross_entropy_from_probs_uniform() {
         // Uniform distribution → loss = -ln(1/3) ≈ 1.099
-        let probs = vec![vec![1.0/3.0; 3]];
+        let probs = vec![vec![1.0 / 3.0; 3]];
         let targets = vec![1]; // target = 0, idx 1
         let loss = ternary_cross_entropy_from_probs(&probs, &targets);
-        assert!((loss - (3.0_f64).ln()).abs() < 0.01, "uniform CE ≈ ln(3), got {}", loss);
+        assert!(
+            (loss - (3.0_f64).ln()).abs() < 0.01,
+            "uniform CE ≈ ln(3), got {}",
+            loss
+        );
     }
 
     // ── Hinge Loss Tests ──
@@ -426,11 +453,15 @@ mod tests {
     fn test_hinge_loss_violated_margin() {
         let scores = vec![
             vec![5.0, 0.0, 5.5], // correct=2 score=5.5, best_incorrect=5.0, margin=1.0
-            // 5.5 - 5.0 = 0.5 < 1.0 → loss = 1.0 - 0.5 = 0.5
+                                 // 5.5 - 5.0 = 0.5 < 1.0 → loss = 1.0 - 0.5 = 0.5
         ];
         let targets = vec![2];
         let loss = ternary_hinge_loss(&scores, &targets, 1.0);
-        assert!((loss - 0.5).abs() < 1e-10, "margin violated → loss = 0.5, got {}", loss);
+        assert!(
+            (loss - 0.5).abs() < 1e-10,
+            "margin violated → loss = 0.5, got {}",
+            loss
+        );
     }
 
     // ── MSE Tests ──
@@ -444,14 +475,18 @@ mod tests {
 
     #[test]
     fn test_mse_computation() {
-        let pred = vec![vec![0, 0, 1]];   // predicted
+        let pred = vec![vec![0, 0, 1]]; // predicted
         let target = vec![vec![-1, 0, 1]]; // target
-        // z3_distance(0, -1) = z3_sub(0, -1) = 1, so dist=1
-        // z3_distance(0, 0) = 0
-        // z3_distance(1, 1) = 0
-        // MSE = (1² + 0² + 0²) / 3 = 1/3
+                                           // z3_distance(0, -1) = z3_sub(0, -1) = 1, so dist=1
+                                           // z3_distance(0, 0) = 0
+                                           // z3_distance(1, 1) = 0
+                                           // MSE = (1² + 0² + 0²) / 3 = 1/3
         let mse = ternary_mse(&pred, &target);
-        assert!((mse - 1.0/3.0).abs() < 1e-10, "MSE should be 1/3, got {}", mse);
+        assert!(
+            (mse - 1.0 / 3.0).abs() < 1e-10,
+            "MSE should be 1/3, got {}",
+            mse
+        );
     }
 
     #[test]
@@ -462,7 +497,11 @@ mod tests {
         // All max distances: each dist=1
         // MSE = (1+1+0)/3 = 2/3
         let mse = ternary_mse(&pred, &target);
-        assert!((mse - 2.0/3.0).abs() < 1e-10, "MSE should be 2/3, got {}", mse);
+        assert!(
+            (mse - 2.0 / 3.0).abs() < 1e-10,
+            "MSE should be 2/3, got {}",
+            mse
+        );
     }
 
     // ── Contrastive Loss Tests ──
@@ -490,10 +529,7 @@ mod tests {
 
     #[test]
     fn test_contrastive_loss_pulls_similar_pushes_different() {
-        let emb_a = vec![
-            vec![1, 0, -1],
-            vec![1, 0, -1],
-        ];
+        let emb_a = vec![vec![1, 0, -1], vec![1, 0, -1]];
         let emb_b = vec![
             vec![1, 0, -1], // identical to a → similar
             vec![-1, 0, 1], // opposite of a → dissimilar
@@ -552,7 +588,11 @@ mod tests {
         let p = vec![vec![0.5, 0.3, 0.2]];
         let q = vec![vec![0.1, 0.1, 0.8]];
         let kl = ternary_kl_divergence(&p, &q);
-        assert!(kl >= 0.0, "KL divergence should be non-negative, got {}", kl);
+        assert!(
+            kl >= 0.0,
+            "KL divergence should be non-negative, got {}",
+            kl
+        );
     }
 
     #[test]
@@ -561,7 +601,12 @@ mod tests {
         let q = vec![vec![0.1, 0.3, 0.6]];
         let kl_pq = ternary_kl_divergence(&p, &q);
         let kl_qp = ternary_kl_divergence(&q, &p);
-        assert!((kl_pq - kl_qp).abs() > 0.01, "KL should be asymmetric: pq={}, qp={}", kl_pq, kl_qp);
+        assert!(
+            (kl_pq - kl_qp).abs() > 0.01,
+            "KL should be asymmetric: pq={}, qp={}",
+            kl_pq,
+            kl_qp
+        );
         assert!(kl_pq > 0.0);
         assert!(kl_qp > 0.0);
     }
@@ -569,7 +614,7 @@ mod tests {
     #[test]
     fn test_kl_divergence_single() {
         let p = [0.5, 0.25, 0.25];
-        let q = [1.0/3.0; 3];
+        let q = [1.0 / 3.0; 3];
         let kl = ternary_kl_single(&p, &q);
         assert!(kl >= 0.0);
     }
